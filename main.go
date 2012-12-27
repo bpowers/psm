@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"runtime"
 	"strconv"
 )
@@ -35,6 +36,11 @@ func pidList() ([]int, error) {
 func main() {
 	// give us as much parallelism as possible
 	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	if os.Geteuid() != 0 {
+		fmt.Printf("FATAL: root required.")
+		return
+	}
 
 	pids, err := pidList()
 	if err != nil {
