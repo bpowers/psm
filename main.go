@@ -215,7 +215,7 @@ func main() {
 	runtime.GOMAXPROCS(nCPU)
 
 	if os.Geteuid() != 0 {
-		fmt.Printf("FATAL: root required.")
+		fmt.Printf("FATAL: root required.\n")
 		return
 	}
 
