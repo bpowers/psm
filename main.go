@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,14 +13,44 @@ import (
 	"sync"
 )
 
+const (
+	CmdDisplayMax = 32
+)
+
 // store info about a command (group of processes), similar to how
 // ps_mem works.
 type CmdMemInfo struct {
 	PIDs    []int
 	Name    string
-	Pss     int
-	Shared  int
-	Swapped int
+	Pss     int64
+	Shared  int64
+	Swapped int64
+}
+
+type MapInfo struct {
+	Inode int64
+	Name  string
+}
+
+// mapLine is a line from /proc/$PID/maps, or one of the same header
+// lines from smaps.
+func NewMapInfo(mapLine []byte) MapInfo {
+	var mi MapInfo
+	var err error
+	pieces := splitSpaces(mapLine)
+	if len(pieces) == 6 {
+		mi.Name = string(pieces[5])
+	}
+	mi.Inode, err = strconv.ParseInt(string(pieces[4]), 10, 64)
+	if err != nil {
+		panic(fmt.Sprintf("NewMapInfo: Atoi(%s): %s (%s)",
+			string(pieces[4]), err, string(mapLine)))
+	}
+	return mi
+}
+
+func (mi MapInfo) IsAnon() bool {
+	return mi.Inode == 0
 }
 
 // isDigit returns true if the rune d represents an ascii digit
@@ -79,6 +110,63 @@ func procName(pid int) (string, error) {
 	return n, nil
 }
 
+func splitSpaces(b []byte) [][]byte {
+	res := make([][]byte, 0, 6)
+	s := bytes.SplitN(b, []byte{' '}, 2)
+	for len(s) > 1 {
+		res = append(res, s[0])
+		s = bytes.SplitN(bytes.TrimSpace(s[1]), []byte{' '}, 2)
+	}
+	res = append(res, s[0])
+	return res
+}
+
+// procMem returns the amount of Pss, shared, and swapped out memory
+// used.  The swapped out amount refers to anonymous pages only.
+func procMem(pid int) (pss, shared, swap int64, err error) {
+	smapB, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/smaps", pid))
+	if err != nil {
+		err = fmt.Errorf("ReadFile(%s): %s", fmt.Sprintf("/proc/%d/smaps", pid), err)
+		return
+	}
+	smapLines := bytes.Split(smapB, []byte{'\n'})
+	var curr MapInfo
+	for _, l := range smapLines {
+		if bytes.Contains(l, []byte{'-'}) {
+			curr = NewMapInfo(l)
+			continue
+		}
+		pieces := splitSpaces(l)
+		ty := string(pieces[0])
+		var v int64
+		switch ty {
+		case "Pss:":
+			v, err = strconv.ParseInt(string(pieces[1]), 10, 64)
+			if err != nil {
+				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
+				return
+			}
+			pss += v
+		case "Shared_Clean:", "Shared_Dirty:":
+			v, err = strconv.ParseInt(string(pieces[1]), 10, 64)
+			if err != nil {
+				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
+				return
+			}
+			shared += v
+		case "Swap:":
+			v, err = strconv.ParseInt(string(pieces[1]), 10, 64)
+			if err != nil {
+				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
+				return
+			}
+			swap += v
+		}
+	}
+	_ = curr
+	return
+}
+
 func worker(pidRequest chan int, wg *sync.WaitGroup, result chan *CmdMemInfo) {
 	for pid := range pidRequest {
 		var err error
@@ -97,7 +185,14 @@ func worker(pidRequest chan int, wg *sync.WaitGroup, result chan *CmdMemInfo) {
 			continue
 		}
 
-		log.Printf("%#v", cmi)
+		cmi.Pss, cmi.Shared, cmi.Swapped, err = procMem(pid)
+		if err != nil {
+			log.Printf("procMem(%d): %s", pid, err)
+			wg.Done()
+			continue
+		}
+
+		result <- cmi
 		wg.Done()
 	}
 }
@@ -132,5 +227,32 @@ func main() {
 	}
 	wg.Wait()
 
+	cmdInfo := map[string]*CmdMemInfo{}
+loop:
+	for {
+		select {
+		case cmi := <-result:
+			n := cmi.Name
+			if _, ok := cmdInfo[n]; !ok {
+				cmdInfo[n] = cmi
+				continue
+			}
+			cmdInfo[n].PIDs = append(cmdInfo[n].PIDs, cmi.PIDs...)
+			cmdInfo[n].Pss += cmi.Pss
+			cmdInfo[n].Shared += cmi.Shared
+			cmdInfo[n].Swapped += cmi.Swapped
+		default:
+			break loop
+		}
+	}
+
+	for n, cmi := range cmdInfo {
+		if len(n) > CmdDisplayMax {
+			n = n[:CmdDisplayMax]
+		}
+		log.Printf("%s (%d)", n, len(cmi.PIDs))
+	}
+
+	//log.Printf("%#v", cmi)
 	log.Printf("pids: %v", pids)
 }
