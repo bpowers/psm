@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,6 +26,7 @@ type CmdMemInfo struct {
 	Pss     int64
 	Shared  int64
 	Swapped int64
+	Total   int64
 }
 
 type MapInfo struct {
@@ -103,9 +105,12 @@ func procName(pid int) (string, error) {
 	args := strings.Split(string(argsB), "\000")
 	n := args[0]
 
-	exe := path.Base(p)
-	if strings.HasPrefix(exe, n) {
-		n = exe
+	nTrunc := n
+	if len(n) > 16 {
+		nTrunc = n[:16]
+	}
+	if strings.HasPrefix(p, nTrunc) {
+		n = path.Base(p)
 	}
 	return n, nil
 }
@@ -191,11 +196,18 @@ func worker(pidRequest chan int, wg *sync.WaitGroup, result chan *CmdMemInfo) {
 			wg.Done()
 			continue
 		}
+		cmi.Total = cmi.Pss + cmi.Shared + cmi.Swapped
 
 		result <- cmi
 		wg.Done()
 	}
 }
+
+type byTotal []*CmdMemInfo
+
+func (c byTotal) Len() int           { return len(c) }
+func (c byTotal) Less(i, j int) bool { return c[i].Total < c[j].Total }
+func (c byTotal) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
 
 func main() {
 	nCPU := runtime.NumCPU()
@@ -227,32 +239,42 @@ func main() {
 	}
 	wg.Wait()
 
-	cmdInfo := map[string]*CmdMemInfo{}
+	cmdMap := map[string]*CmdMemInfo{}
 loop:
 	for {
 		select {
-		case cmi := <-result:
-			n := cmi.Name
-			if _, ok := cmdInfo[n]; !ok {
-				cmdInfo[n] = cmi
+		case c := <-result:
+			n := c.Name
+			if _, ok := cmdMap[n]; !ok {
+				cmdMap[n] = c
 				continue
 			}
-			cmdInfo[n].PIDs = append(cmdInfo[n].PIDs, cmi.PIDs...)
-			cmdInfo[n].Pss += cmi.Pss
-			cmdInfo[n].Shared += cmi.Shared
-			cmdInfo[n].Swapped += cmi.Swapped
+			cmdMap[n].PIDs = append(cmdMap[n].PIDs, c.PIDs...)
+			cmdMap[n].Pss += c.Pss
+			cmdMap[n].Shared += c.Shared
+			cmdMap[n].Swapped += c.Swapped
 		default:
 			break loop
 		}
 	}
 
-	for n, cmi := range cmdInfo {
+	cmds := make([]*CmdMemInfo, 0, len(cmdMap))
+
+	for _, c := range cmdMap {
+		cmds = append(cmds, c)
+	}
+
+	sort.Sort(byTotal(cmds))
+
+	for _, c := range cmds {
+		n := c.Name
 		if len(n) > CmdDisplayMax {
 			n = n[:CmdDisplayMax]
 		}
-		log.Printf("%s (%d)", n, len(cmi.PIDs))
+		if c.Swapped == 0 {
+			fmt.Printf("%d kB\t%s (%d)\n", c.Total, n, len(c.PIDs))
+		} else {
+			fmt.Printf("%d kB (%d kB swap)\t%s (%d)\n", c.Total, c.Swapped, n, len(c.PIDs))
+		}
 	}
-
-	//log.Printf("%#v", cmi)
-	log.Printf("pids: %v", pids)
 }
