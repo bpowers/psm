@@ -16,6 +16,7 @@ import (
 
 const (
 	CmdDisplayMax = 32
+	CommMax = 16 // max length of /proc/$PID/comm
 )
 
 // store info about a command (group of processes), similar to how
@@ -106,8 +107,8 @@ func procName(pid int) (string, error) {
 	n := args[0]
 
 	nTrunc := n
-	if len(n) > 16 {
-		nTrunc = n[:16]
+	if len(n) > CommMax {
+		nTrunc = n[:CommMax]
 	}
 	if strings.HasPrefix(p, nTrunc) {
 		n = path.Base(p)
