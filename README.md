@@ -39,6 +39,6 @@ example output
         165.99    165.64    538.46	[celeryd@lookbacks:MainProcess]  (1)
         210.32    209.52          	[celeryd@stats:MainProcess] -act (1)
 
-psm makes it easy to see who is using the resident memory, and who is
+psm makes it easy to see who is resident in memory, and who is
 swapped out.  The total column is the sum of the Pss of each mapping
 in `/proc/$PID/smaps`.
