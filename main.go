@@ -16,7 +16,11 @@ import (
 
 const (
 	CmdDisplayMax = 32
-	CommMax = 16 // max length of /proc/$PID/comm
+	// max length of /proc/$PID/comm
+	CommMax = 16
+	// from ps_mem - average error due to truncation in the kernel
+	// pss calculations
+	PssAdjust = .5
 )
 
 // store info about a command (group of processes), similar to how
@@ -24,10 +28,10 @@ const (
 type CmdMemInfo struct {
 	PIDs    []int
 	Name    string
-	Pss     int64
+	Pss     float64
 	Shared  int64
+	Private int64
 	Swapped int64
-	Total   int64
 }
 
 type MapInfo struct {
@@ -129,7 +133,7 @@ func splitSpaces(b []byte) [][]byte {
 
 // procMem returns the amount of Pss, shared, and swapped out memory
 // used.  The swapped out amount refers to anonymous pages only.
-func procMem(pid int) (pss, shared, swap int64, err error) {
+func procMem(pid int) (pss float64, shared, priv, swap int64, err error) {
 	smapB, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/smaps", pid))
 	if err != nil {
 		err = fmt.Errorf("ReadFile(%s): %s", fmt.Sprintf("/proc/%d/smaps", pid), err)
@@ -152,7 +156,7 @@ func procMem(pid int) (pss, shared, swap int64, err error) {
 				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
 				return
 			}
-			pss += v
+			pss += float64(v) + PssAdjust
 		case "Shared_Clean:", "Shared_Dirty:":
 			v, err = strconv.ParseInt(string(pieces[1]), 10, 64)
 			if err != nil {
@@ -160,6 +164,13 @@ func procMem(pid int) (pss, shared, swap int64, err error) {
 				return
 			}
 			shared += v
+		case "Private_Clean:", "Private_Dirty:":
+			v, err = strconv.ParseInt(string(pieces[1]), 10, 64)
+			if err != nil {
+				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
+				return
+			}
+			priv += v
 		case "Swap:":
 			v, err = strconv.ParseInt(string(pieces[1]), 10, 64)
 			if err != nil {
@@ -191,13 +202,12 @@ func worker(pidRequest chan int, wg *sync.WaitGroup, result chan *CmdMemInfo) {
 			continue
 		}
 
-		cmi.Pss, cmi.Shared, cmi.Swapped, err = procMem(pid)
+		cmi.Pss, cmi.Shared, cmi.Private, cmi.Swapped, err = procMem(pid)
 		if err != nil {
 			log.Printf("procMem(%d): %s", pid, err)
 			wg.Done()
 			continue
 		}
-		cmi.Total = cmi.Pss + cmi.Shared + cmi.Swapped
 
 		result <- cmi
 		wg.Done()
@@ -207,7 +217,7 @@ func worker(pidRequest chan int, wg *sync.WaitGroup, result chan *CmdMemInfo) {
 type byTotal []*CmdMemInfo
 
 func (c byTotal) Len() int           { return len(c) }
-func (c byTotal) Less(i, j int) bool { return c[i].Total < c[j].Total }
+func (c byTotal) Less(i, j int) bool { return c[i].Pss < c[j].Pss }
 func (c byTotal) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
 
 func main() {
@@ -252,6 +262,7 @@ loop:
 			}
 			cmdMap[n].PIDs = append(cmdMap[n].PIDs, c.PIDs...)
 			cmdMap[n].Pss += c.Pss
+			cmdMap[n].Private += c.Private
 			cmdMap[n].Shared += c.Shared
 			cmdMap[n].Swapped += c.Swapped
 		default:
@@ -267,15 +278,16 @@ loop:
 
 	sort.Sort(byTotal(cmds))
 
+	fmt.Printf("  MB TOTAL      PRIV      SWAP\tPROCESS (COUNT)\n")
 	for _, c := range cmds {
 		n := c.Name
 		if len(n) > CmdDisplayMax {
 			n = n[:CmdDisplayMax]
 		}
-		if c.Swapped == 0 {
-			fmt.Printf("%d kB\t%s (%d)\n", c.Total, n, len(c.PIDs))
-		} else {
-			fmt.Printf("%d kB (%d kB swap)\t%s (%d)\n", c.Total, c.Swapped, n, len(c.PIDs))
+		s := ""
+		if c.Swapped > 0 {
+			s = fmt.Sprintf("%10.2f", float64(c.Swapped)/1024.)
 		}
+		fmt.Printf("%10.2f%10.2f%10s\t%s (%d)\n", float64(c.Pss)/1024., float64(c.Private)/1024, s, n, len(c.PIDs))
 	}
 }
