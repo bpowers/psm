@@ -243,10 +243,9 @@ func (c byTotal) Less(i, j int) bool { return c[i].Pss < c[j].Pss }
 func (c byTotal) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
 
 func main() {
-	nCPU := runtime.NumCPU()
-	// give us as much parallelism as possible
-	runtime.GOMAXPROCS(nCPU)
 
+	// need to be root to read map info for other user's
+	// processes.
 	if os.Geteuid() != 0 {
 		fmt.Printf("FATAL: root required.\n")
 		return
@@ -262,6 +261,9 @@ func main() {
 	work := make(chan int, len(pids))
 	result := make(chan *CmdMemInfo, len(pids))
 
+	// give us as much parallelism as possible
+	nCPU := runtime.NumCPU()
+	runtime.GOMAXPROCS(nCPU)
 	for i := 0; i < nCPU; i++ {
 		go worker(work, &wg, result)
 	}
@@ -276,6 +278,9 @@ func main() {
 	cmdMap := map[string]*CmdMemInfo{}
 loop:
 	for {
+		// this only works correctly because we a channel
+		// where the buffer size >= the number of potential
+		// results.
 		select {
 		case c := <-result:
 			n := c.Name
@@ -307,7 +312,11 @@ loop:
 	for _, c := range cmds {
 		n := c.Name
 		if len(n) > CmdDisplayMax {
-			n = n[:CmdDisplayMax]
+			if n[0] == '[' {
+				n = n[:strings.IndexRune(n, ']')+1]
+			} else {
+				n = n[:CmdDisplayMax]
+			}
 		}
 		s := ""
 		if c.Swapped > 0 {
