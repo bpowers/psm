@@ -278,6 +278,8 @@ loop:
 
 	sort.Sort(byTotal(cmds))
 
+	var totPss, totSwap float64
+
 	fmt.Printf("%10s%10s%10s\t%s\n", "MB RAM", "PRIVATE", "SWAPPED", "PROCESS (COUNT)")
 	for _, c := range cmds {
 		n := c.Name
@@ -286,8 +288,13 @@ loop:
 		}
 		s := ""
 		if c.Swapped > 0 {
-			s = fmt.Sprintf("%10.1f", float64(c.Swapped)/1024.)
+			swap := float64(c.Swapped)/1024.
+			totSwap += swap
+			s = fmt.Sprintf("%10.1f", swap)
 		}
-		fmt.Printf("%10.1f%10.1f%10s\t%s (%d)\n", float64(c.Pss)/1024., float64(c.Private)/1024, s, n, len(c.PIDs))
+		pss := float64(c.Pss)/1024.
+		fmt.Printf("%10.1f%10.1f%10s\t%s (%d)\n", pss, float64(c.Private)/1024, s, n, len(c.PIDs))
+		totPss += pss
 	}
+	fmt.Printf("#%9.1f%20.1f\tTOTAL USED BY PROCESSES\n", totPss, totSwap)
 }
