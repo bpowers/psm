@@ -286,8 +286,8 @@ loop:
 		}
 		s := ""
 		if c.Swapped > 0 {
-			s = fmt.Sprintf("%10.2f", float64(c.Swapped)/1024.)
+			s = fmt.Sprintf("%10.1f", float64(c.Swapped)/1024.)
 		}
-		fmt.Printf("%10.2f%10.2f%10s\t%s (%d)\n", float64(c.Pss)/1024., float64(c.Private)/1024, s, n, len(c.PIDs))
+		fmt.Printf("%10.1f%10.1f%10s\t%s (%d)\n", float64(c.Pss)/1024., float64(c.Private)/1024, s, n, len(c.PIDs))
 	}
 }
