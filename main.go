@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -21,6 +23,7 @@ const (
 	// from ps_mem - average error due to truncation in the kernel
 	// pss calculations
 	PssAdjust = .5
+	pageSize = 4096
 )
 
 // store info about a command (group of processes), similar to how
@@ -134,16 +137,36 @@ func splitSpaces(b []byte) [][]byte {
 // procMem returns the amount of Pss, shared, and swapped out memory
 // used.  The swapped out amount refers to anonymous pages only.
 func procMem(pid int) (pss float64, shared, priv, swap int64, err error) {
-	smapB, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/smaps", pid))
+	fPath := fmt.Sprintf("/proc/%d/smaps", pid)
+	f, err := os.Open(fPath)
 	if err != nil {
-		err = fmt.Errorf("ReadFile(%s): %s", fmt.Sprintf("/proc/%d/smaps", pid), err)
+		err = fmt.Errorf("os.Open(%s): %s", fPath, err)
 		return
 	}
-	smapLines := bytes.Split(smapB, []byte{'\n'})
-	var curr MapInfo
-	for _, l := range smapLines {
+	//var curr MapInfo
+	r := bufio.NewReaderSize(f, pageSize)
+	for {
+		var l []byte
+		var isPrefix bool
+		l, isPrefix, err = r.ReadLine()
+		// this should never happen, so take the easy way out.
+		if isPrefix {
+			err = fmt.Errorf("ReadLine(%s): isPrefix", fPath)
+		}
+		if err != nil {
+			// if we've got EOF, then we're simply done
+			// processing smaps.
+			if err == io.EOF {
+				err = nil
+				break
+			}
+			// otherwise error out
+			err = fmt.Errorf("ReadLine(%s): %s", fPath, err)
+			return
+		}
+
 		if bytes.Contains(l, []byte{'-'}) {
-			curr = NewMapInfo(l)
+			//curr = NewMapInfo(l)
 			continue
 		}
 		pieces := splitSpaces(l)
@@ -180,7 +203,6 @@ func procMem(pid int) (pss float64, shared, priv, swap int64, err error) {
 			swap += v
 		}
 	}
-	_ = curr
 	return
 }
 
@@ -250,6 +272,7 @@ func main() {
 	}
 	wg.Wait()
 
+	// aggregate similar processes by command name.
 	cmdMap := map[string]*CmdMemInfo{}
 loop:
 	for {
@@ -270,14 +293,14 @@ loop:
 		}
 	}
 
+	// extract map values to a slice so we can sort them
 	cmds := make([]*CmdMemInfo, 0, len(cmdMap))
-
 	for _, c := range cmdMap {
 		cmds = append(cmds, c)
 	}
-
 	sort.Sort(byTotal(cmds))
 
+	// keep track of total RAM and swap usage
 	var totPss, totSwap float64
 
 	fmt.Printf("%10s%10s%10s\t%s\n", "MB RAM", "PRIVATE", "SWAPPED", "PROCESS (COUNT)")
