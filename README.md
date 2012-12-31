@@ -1,19 +1,20 @@
 psm - simple, accurate memory reporting for Linux
 =================================================
 
-psm makes it easy to see who is resident in memory, and who is
+`psm` makes it easy to see who is resident in memory, and who is
 significantly swapped out.
 
-psm is based off the ideas and implementation of
+`psm` is based off the ideas and implementation of
 [ps_mem.py](https://github.com/pixelb/scripts/commits/master/scripts/ps_mem.py).
-It is implemented in go, and since the executable is a binary it can
-be made setuid root so that unprivileged users can get a quick
-overview of the current memory situation.
+It requires root privileges to run.  It is implemented in go, and
+since the executable is a binary it can be made setuid root so that
+unprivileged users can get a quick overview of the current memory
+situation.
 
 example output
 --------------
 
-    bpowers@python-worker-01:~$ sudo /usr/bin/time ./psm
+    bpowers@python-worker-01:~$ psm
         MB RAM   PRIVATE   SWAPPED	PROCESS (COUNT)
            0.1       0.1          	time (1)
            0.2       0.2          	/bin/sh (1)
