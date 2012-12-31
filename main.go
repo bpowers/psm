@@ -278,7 +278,7 @@ loop:
 
 	sort.Sort(byTotal(cmds))
 
-	fmt.Printf("  MB TOTAL      PRIV      SWAP\tPROCESS (COUNT)\n")
+	fmt.Printf("%10s%10s%10s\t%s\n", "MB RAM", "PRIVATE", "SWAPPED", "PROCESS (COUNT)")
 	for _, c := range cmds {
 		n := c.Name
 		if len(n) > CmdDisplayMax {
