@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"runtime/pprof"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,7 +25,18 @@ const (
 	// from ps_mem - average error due to truncation in the kernel
 	// pss calculations
 	PssAdjust = .5
-	pageSize = 4096
+	pageSize  = 4096
+
+	usage = `Usage: %s [OPTION...]
+Simple, accurate RAM and swap reporting.
+
+Options:
+`
+)
+
+var (
+	memProfile string
+	cpuProfile string
 )
 
 // store info about a command (group of processes), similar to how
@@ -242,7 +255,57 @@ func (c byTotal) Len() int           { return len(c) }
 func (c byTotal) Less(i, j int) bool { return c[i].Pss < c[j].Pss }
 func (c byTotal) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
 
+func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, usage, os.Args[0])
+		flag.PrintDefaults()
+	}
+
+	flag.StringVar(&memProfile, "memprofile", "",
+		"write memory profile to this file")
+	flag.StringVar(&cpuProfile, "cpuprofile", "",
+		"write cpu profile to this file")
+
+	flag.Parse()
+}
+
+// startProfiling enables memory and/or CPU profiling if the
+// appropriate command line flags have been set.
+func startProfiling() {
+	var err error
+	// if we've passed in filenames to dump profiling data too,
+	// start collecting profiling data.
+	if memProfile != "" {
+		runtime.MemProfileRate = 1
+	}
+	if cpuProfile != "" {
+		var f *os.File
+		if f, err = os.Create(cpuProfile); err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+	}
+}
+
+func stopProfiling() {
+	if memProfile != "" {
+		runtime.GC()
+		f, err := os.Create(memProfile)
+		if err != nil {
+			log.Println(err)
+		}
+		pprof.WriteHeapProfile(f)
+		f.Close()
+	}
+	if cpuProfile != "" {
+		pprof.StopCPUProfile()
+		cpuProfile = ""
+	}
+}
+
 func main() {
+	startProfiling()
+	defer stopProfiling()
 
 	// need to be root to read map info for other user's
 	// processes.
@@ -320,11 +383,11 @@ loop:
 		}
 		s := ""
 		if c.Swapped > 0 {
-			swap := float64(c.Swapped)/1024.
+			swap := float64(c.Swapped) / 1024.
 			totSwap += swap
 			s = fmt.Sprintf("%10.1f", swap)
 		}
-		pss := float64(c.Pss)/1024.
+		pss := float64(c.Pss) / 1024.
 		fmt.Printf("%10.1f%10.1f%10s\t%s (%d)\n", pss, float64(c.Private)/1024, s, n, len(c.PIDs))
 		totPss += pss
 	}
