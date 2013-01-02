@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -37,6 +38,11 @@ Options:
 var (
 	memProfile string
 	cpuProfile string
+
+	tyPss          = []byte("Pss:")
+	tySwap         = []byte("Swap:")
+	tyPrivateClean = []byte("Private_Clean:")
+	tyPrivateDirty = []byte("Private_Dirty:")
 )
 
 // store info about a command (group of processes), similar to how
@@ -201,24 +207,23 @@ func procMem(pid int) (pss float64, priv, swap uint64, err error) {
 			continue
 		}
 		pieces := splitSpaces(l)
-		ty := string(pieces[0])
+		ty := pieces[0]
 		var v uint64
-		switch ty {
-		case "Pss:":
+		if bytes.Equal(ty, tyPss) {
 			v, err = ParseUint(pieces[1], 10, 64)
 			if err != nil {
 				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
 				return
 			}
 			pss += float64(v) + PssAdjust
-		case "Private_Clean:", "Private_Dirty:":
+		} else if bytes.Equal(ty, tyPrivateClean) || bytes.Equal(ty, tyPrivateDirty) {
 			v, err = ParseUint(pieces[1], 10, 64)
 			if err != nil {
 				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
 				return
 			}
 			priv += v
-		case "Swap:":
+		} else if bytes.Equal(ty, tySwap) {
 			v, err = ParseUint(pieces[1], 10, 64)
 			if err != nil {
 				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
