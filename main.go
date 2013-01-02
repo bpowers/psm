@@ -23,8 +23,8 @@ const (
 	CommMax = 16
 	// from ps_mem - average error due to truncation in the kernel
 	// pss calculations
-	PssAdjust = .5
-	pageSize  = 4096
+	PssAdjust    = .5
+	pageSize     = 4096
 	mapDetailLen = len("Size:                  4 kB")
 
 	usage = `Usage: %s [OPTION...]
@@ -45,7 +45,6 @@ type CmdMemInfo struct {
 	PIDs    []int
 	Name    string
 	Pss     float64
-	Shared  uint64
 	Private uint64
 	Swapped uint64
 }
@@ -168,7 +167,7 @@ func splitSpaces(b []byte) [][]byte {
 
 // procMem returns the amount of Pss, shared, and swapped out memory
 // used.  The swapped out amount refers to anonymous pages only.
-func procMem(pid int) (pss float64, shared, priv, swap uint64, err error) {
+func procMem(pid int) (pss float64, priv, swap uint64, err error) {
 	fPath := fmt.Sprintf("/proc/%d/smaps", pid)
 	f, err := os.Open(fPath)
 	if err != nil {
@@ -212,13 +211,6 @@ func procMem(pid int) (pss float64, shared, priv, swap uint64, err error) {
 				return
 			}
 			pss += float64(v) + PssAdjust
-		case "Shared_Clean:", "Shared_Dirty:":
-			v, err = ParseUint(pieces[1], 10, 64)
-			if err != nil {
-				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
-				return
-			}
-			shared += v
 		case "Private_Clean:", "Private_Dirty:":
 			v, err = ParseUint(pieces[1], 10, 64)
 			if err != nil {
@@ -256,7 +248,7 @@ func worker(pidRequest chan int, wg *sync.WaitGroup, result chan *CmdMemInfo) {
 			continue
 		}
 
-		cmi.Pss, cmi.Shared, cmi.Private, cmi.Swapped, err = procMem(pid)
+		cmi.Pss, cmi.Private, cmi.Swapped, err = procMem(pid)
 		if err != nil {
 			log.Printf("procMem(%d): %s", pid, err)
 			wg.Done()
@@ -373,7 +365,6 @@ loop:
 			cmdMap[n].PIDs = append(cmdMap[n].PIDs, c.PIDs...)
 			cmdMap[n].Pss += c.Pss
 			cmdMap[n].Private += c.Private
-			cmdMap[n].Shared += c.Shared
 			cmdMap[n].Swapped += c.Swapped
 		default:
 			break loop
@@ -407,7 +398,7 @@ loop:
 			s = fmt.Sprintf("%10.1f", swap)
 		}
 		pss := float64(c.Pss) / 1024.
-		fmt.Printf("%10.1f%10.1f%10s\t%s (%d)\n", pss, float64(c.Private)/1024, s, n, len(c.PIDs))
+		fmt.Printf("%10.1f%10.1f%10s\t%s (%d)\n", pss, float64(c.Private)/1024., s, n, len(c.PIDs))
 		totPss += pss
 	}
 	fmt.Printf("#%9.1f%20.1f\tTOTAL USED BY PROCESSES\n", totPss, totSwap)
