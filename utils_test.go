@@ -20,6 +20,7 @@ var splitSpacesData = [...]struct {
 	{"", []string{}},
 	{"    ", []string{}},
 	{"abc", []string{"abc"}},
+	{"abc ", []string{"abc"}},
 	{"    abc", []string{"abc"}},
 	{"abc 123", []string{"abc", "123"}},
 	{"abc 123    ", []string{"abc", "123"}},

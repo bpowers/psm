@@ -161,7 +161,7 @@ func splitSpaces(b []byte) [][]byte {
 		}
 		if i > start {
 			// we sometimes have to rewind
-			if i < lenB-1 && b[i] == ' ' {
+			if i < lenB && b[i] == ' ' {
 				i--
 			}
 			res = append(res, b[start:i+1])
