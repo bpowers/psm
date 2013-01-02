@@ -151,8 +151,7 @@ func splitSpaces(b []byte) [][]byte {
 	// preallocate the slice's array appropriately.
 	res := make([][]byte, 0, 3)
 	start := 0
-	lenB := len(b)
-	for i := 0; i < lenB - 1; i++ {
+	for i := 0; i < len(b)-1; i++ {
 		if b[i] == ' ' {
 			start = i + 1
 		} else if b[i+1] == ' ' {
@@ -160,8 +159,8 @@ func splitSpaces(b []byte) [][]byte {
 			start = i + 1
 		}
 	}
-	if start != lenB && b[start] != ' ' {
-		res = append(res, b[start:lenB])
+	if start != len(b) && b[start] != ' ' {
+		res = append(res, b[start:])
 	}
 	return res
 }
