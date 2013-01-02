@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"unicode"
 )
 
 const (
@@ -140,23 +139,24 @@ func procName(pid int) (string, error) {
 // splitSpaces returns a slice of byte slices which are the space
 // delimited words from the original byte slice.  Unlike
 // strings.Split($X, " "), runs of multiple spaces in a row are
-// discarded.
+// discarded.  NOTE WELL: this only checks for spaces (' '), other
+// unicode whitespace isn't supported.
 func splitSpaces(b []byte) [][]byte {
 	res := make([][]byte, 0, 6) // 6 is empirically derived
 	start, i := 0, 0
 	lenB := len(b)
 	for i = 0; i < lenB; i++ {
 		// fast forward past any spaces
-		for i < lenB-1 && unicode.IsSpace(rune(b[i])) {
+		for i < lenB-1 && b[i] == ' ' {
 			i++
 			start = i
 		}
-		for i < lenB-1 && !unicode.IsSpace(rune(b[i])) {
+		for i < lenB-1 && b[i] != ' ' {
 			i++
 		}
 		if i > start {
 			// we sometimes have to rewind
-			if i < lenB-1 && unicode.IsSpace(rune(b[i])) {
+			if i < lenB-1 && b[i] == ' ' {
 				i--
 			}
 			res = append(res, b[start:i+1])
