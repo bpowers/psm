@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package strconv
+package main
 
 import "errors"
+import "strconv"
 
 // ErrRange indicates that a value is out of range for the target type.
 var ErrRange = errors.New("value out of range")
@@ -44,7 +45,7 @@ func cutoff64(base int) uint64 {
 }
 
 // ParseUint is like ParseInt but for unsigned numbers.
-func ParseUint(s string, base int, bitSize int) (n uint64, err error) {
+func ParseUint(s []byte, base int, bitSize int) (n uint64, err error) {
 	var cutoff, maxVal uint64
 
 	if bitSize == 0 {
@@ -77,7 +78,7 @@ func ParseUint(s string, base int, bitSize int) (n uint64, err error) {
 		}
 
 	default:
-		err = errors.New("invalid base " + Itoa(base))
+		err = errors.New("invalid base " + strconv.Itoa(base))
 		goto Error
 	}
 
@@ -127,69 +128,5 @@ func ParseUint(s string, base int, bitSize int) (n uint64, err error) {
 	return n, nil
 
 Error:
-	return n, &NumError{"ParseUint", s0, err}
-}
-
-// ParseInt interprets a string s in the given base (2 to 36) and
-// returns the corresponding value i.  If base == 0, the base is
-// implied by the string's prefix: base 16 for "0x", base 8 for
-// "0", and base 10 otherwise.
-//
-// The bitSize argument specifies the integer type
-// that the result must fit into.  Bit sizes 0, 8, 16, 32, and 64
-// correspond to int, int8, int16, int32, and int64.
-//
-// The errors that ParseInt returns have concrete type *NumError
-// and include err.Num = s.  If s is empty or contains invalid
-// digits, err.Error = ErrSyntax; if the value corresponding
-// to s cannot be represented by a signed integer of the
-// given size, err.Error = ErrRange.
-func ParseInt(s string, base int, bitSize int) (i int64, err error) {
-	const fnParseInt = "ParseInt"
-
-	if bitSize == 0 {
-		bitSize = int(IntSize)
-	}
-
-	// Empty string bad.
-	if len(s) == 0 {
-		return 0, syntaxError(fnParseInt, s)
-	}
-
-	// Pick off leading sign.
-	s0 := s
-	neg := false
-	if s[0] == '+' {
-		s = s[1:]
-	} else if s[0] == '-' {
-		neg = true
-		s = s[1:]
-	}
-
-	// Convert unsigned and check range.
-	var un uint64
-	un, err = ParseUint(s, base, bitSize)
-	if err != nil && err.(*NumError).Err != ErrRange {
-		err.(*NumError).Func = fnParseInt
-		err.(*NumError).Num = s0
-		return 0, err
-	}
-	cutoff := uint64(1 << uint(bitSize-1))
-	if !neg && un >= cutoff {
-		return int64(cutoff - 1), rangeError(fnParseInt, s0)
-	}
-	if neg && un > cutoff {
-		return -int64(cutoff), rangeError(fnParseInt, s0)
-	}
-	n := int64(un)
-	if neg {
-		n = -n
-	}
-	return n, nil
-}
-
-// Atoi is shorthand for ParseInt(s, 10, 0).
-func Atoi(s string) (i int, err error) {
-	i64, err := ParseInt(s, 10, 0)
-	return int(i64), err
+	return n, &NumError{"ParseUint", string(s0), err}
 }

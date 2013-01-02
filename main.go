@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
 	"io"
@@ -27,6 +26,7 @@ const (
 	// pss calculations
 	PssAdjust = .5
 	pageSize  = 4096
+	mapDetailLen = len("Size:                  4 kB")
 
 	usage = `Usage: %s [OPTION...]
 Simple, accurate RAM and swap reporting.
@@ -46,13 +46,13 @@ type CmdMemInfo struct {
 	PIDs    []int
 	Name    string
 	Pss     float64
-	Shared  int64
-	Private int64
-	Swapped int64
+	Shared  uint64
+	Private uint64
+	Swapped uint64
 }
 
 type MapInfo struct {
-	Inode int64
+	Inode uint64
 	Name  string
 }
 
@@ -65,7 +65,7 @@ func NewMapInfo(mapLine []byte) MapInfo {
 	if len(pieces) == 6 {
 		mi.Name = string(pieces[5])
 	}
-	mi.Inode, err = strconv.ParseInt(string(pieces[4]), 10, 64)
+	mi.Inode, err = ParseUint(pieces[4], 10, 64)
 	if err != nil {
 		panic(fmt.Sprintf("NewMapInfo: Atoi(%s): %s (%s)",
 			string(pieces[4]), err, string(mapLine)))
@@ -168,7 +168,7 @@ func splitSpaces(b []byte) [][]byte {
 
 // procMem returns the amount of Pss, shared, and swapped out memory
 // used.  The swapped out amount refers to anonymous pages only.
-func procMem(pid int) (pss float64, shared, priv, swap int64, err error) {
+func procMem(pid int) (pss float64, shared, priv, swap uint64, err error) {
 	fPath := fmt.Sprintf("/proc/%d/smaps", pid)
 	f, err := os.Open(fPath)
 	if err != nil {
@@ -197,37 +197,37 @@ func procMem(pid int) (pss float64, shared, priv, swap int64, err error) {
 			return
 		}
 
-		if bytes.Contains(l, []byte{'-'}) {
+		if len(l) != mapDetailLen {
 			//curr = NewMapInfo(l)
 			continue
 		}
 		pieces := splitSpaces(l)
 		ty := string(pieces[0])
-		var v int64
+		var v uint64
 		switch ty {
 		case "Pss:":
-			v, err = strconv.ParseInt(string(pieces[1]), 10, 64)
+			v, err = ParseUint(pieces[1], 10, 64)
 			if err != nil {
 				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
 				return
 			}
 			pss += float64(v) + PssAdjust
 		case "Shared_Clean:", "Shared_Dirty:":
-			v, err = strconv.ParseInt(string(pieces[1]), 10, 64)
+			v, err = ParseUint(pieces[1], 10, 64)
 			if err != nil {
 				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
 				return
 			}
 			shared += v
 		case "Private_Clean:", "Private_Dirty:":
-			v, err = strconv.ParseInt(string(pieces[1]), 10, 64)
+			v, err = ParseUint(pieces[1], 10, 64)
 			if err != nil {
 				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
 				return
 			}
 			priv += v
 		case "Swap:":
-			v, err = strconv.ParseInt(string(pieces[1]), 10, 64)
+			v, err = ParseUint(pieces[1], 10, 64)
 			if err != nil {
 				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
 				return
