@@ -85,6 +85,7 @@ var splitSpacesData = [...]struct {
 	{"", []string{}},
 	{" ", []string{}},
 	{"    ", []string{}},
+	{" a ", []string{"a"}},
 	{"abc", []string{"abc"}},
 	{"abc ", []string{"abc"}},
 	{"    abc ", []string{"abc"}},

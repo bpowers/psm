@@ -150,23 +150,16 @@ func splitSpaces(b []byte) [][]byte {
 	res := make([][]byte, 0, 6) // 6 is empirically derived
 	start, i := 0, 0
 	lenB := len(b)
-	for i = 0; i < lenB; i++ {
-		// fast forward past any spaces
-		for i < lenB-1 && b[i] == ' ' {
-			i++
-			start = i
-		}
-		for i < lenB-1 && b[i] != ' ' {
-			i++
-		}
-		if i > start {
-			// we sometimes have to rewind
-			if i < lenB && b[i] == ' ' {
-				i--
-			}
+	for ; i < lenB - 1; i++ {
+		if b[i] == ' ' {
+			start = i + 1
+		} else if b[i+1] == ' ' {
 			res = append(res, b[start:i+1])
 			start = i + 1
 		}
+	}
+	if start != lenB && b[start] != ' ' {
+		res = append(res, b[start:lenB])
 	}
 	return res
 }
