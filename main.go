@@ -137,12 +137,6 @@ func procName(pid int) (string, error) {
 	return n, nil
 }
 
-// isSpace wrapps unicode.IsSpace, accepting a byte argument instead
-// of a rune arg.
-func isSpace(b byte) bool {
-	return unicode.IsSpace(rune(b))
-}
-
 // splitSpaces returns a slice of byte slices which are the space
 // delimited words from the original byte slice.  Unlike
 // strings.Split($X, " "), runs of multiple spaces in a row are
@@ -153,16 +147,16 @@ func splitSpaces(b []byte) [][]byte {
 	lenB := len(b)
 	for i = 0; i < lenB; i++ {
 		// fast forward past any spaces
-		for i < lenB-1 && isSpace(b[i]) {
+		for i < lenB-1 && unicode.IsSpace(rune(b[i])) {
 			i++
 			start = i
 		}
-		for i < lenB-1 && !isSpace(b[i]) {
+		for i < lenB-1 && !unicode.IsSpace(rune(b[i])) {
 			i++
 		}
 		if i > start {
 			// we sometimes have to rewind
-			if i < lenB-1 && isSpace(b[i]) {
+			if i < lenB-1 && unicode.IsSpace(rune(b[i])) {
 				i--
 			}
 			res = append(res, b[start:i+1])
