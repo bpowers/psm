@@ -150,18 +150,19 @@ func splitSpaces(b []byte) [][]byte {
 	// most lines in smaps have the form "Swap: 4 kB", so
 	// preallocate the slice's array appropriately.
 	res := make([][]byte, 0, 3)
-	start := 0
-	lenB := len(b)
-	for i := 0; i < lenB - 1; i++ {
+	for i := 0; i < len(b); {
 		if b[i] == ' ' {
-			start = i + 1
-		} else if b[i+1] == ' ' {
-			res = append(res, b[start:i+1])
-			start = i + 1
+			i++
+			continue
 		}
-	}
-	if start != lenB && b[start] != ' ' {
-		res = append(res, b[start:lenB])
+		end := bytes.IndexByte(b[i:], ' ')
+		if end == -1 {
+			end = len(b)
+		} else {
+			end += i
+		}
+		res = append(res, b[i:end])
+		i = end
 	}
 	return res
 }
