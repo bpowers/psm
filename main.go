@@ -147,7 +147,9 @@ func procName(pid int) (string, error) {
 // discarded.  NOTE WELL: this only checks for spaces (' '), other
 // unicode whitespace isn't supported.
 func splitSpaces(b []byte) [][]byte {
-	res := make([][]byte, 0, 6) // 6 is empirically derived
+	// most lines in smaps have the form "Swap: 4 kB", so
+	// preallocate the slice's array appropriately.
+	res := make([][]byte, 0, 3)
 	start, i := 0, 0
 	lenB := len(b)
 	for ; i < lenB - 1; i++ {
