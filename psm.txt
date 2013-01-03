@@ -1,0 +1,45 @@
+psm(1)
+======
+
+NAME
+----
+psm - Core memory and swap reporting
+
+SYNOPSIS
+--------
+'psm' [-cpuprofile=<file>] [-memprofile=<file>]
+
+DESCRIPTION
+-----------
+Makes it easy to see who is resident in memory, and who is
+significantly swapped out.
+
+psm is based off the ideas and implementation of ps_mem.py. It
+requires root privileges to run - and as such is typically installed
+as setuid root.
+
+OPTIONS
+-------
+
+-cpuprofile=<file>::
+	Records a CPU profile to the given file, suitable for use with
+	'go tool pprof'.
+
+-memprofile=<file>::
+	Records a profile of memory allocations to the given file,
+	suitable for use with 'go tool pprof'.
+
+AUTHOR
+------
+psm was originally written by Bobby Powers.
+
+
+RESOURCES
+---------
+Main web site: <https://github.com/bpowers/psm>
+
+
+COPYING
+-------
+Copyright \(C) 2012-2013 Bobby Powers. Free use of this software is
+granted under the terms of the MIT license.

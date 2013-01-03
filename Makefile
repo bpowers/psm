@@ -20,9 +20,20 @@ psm: *.go
 	if [ $(shell basename $(PWD)) != psm ]; then mv $(shell basename $(PWD)) psm; fi
 
 clean:
-	rm -rf psm build
+	rm -rf psm build psm.1 psm.xml psm.html *~
 
-install: psm
+psm.html: psm.txt
+	asciidoc -b xhtml11 -d manpage -f asciidoc.conf -o $@ $<
+
+psm.xml: psm.txt
+	asciidoc -b docbook -d manpage -f asciidoc.conf -o $@ $<
+
+psm.1: psm.xml
+	xmlto man $<
+	cat $@ | sed -e 's/\[FIXME: source\]/psm/' -e 's/\[FIXME: manual\]/User Commands/' >$@.tmp
+	mv $@.tmp $@
+
+install: psm psm.1
 	install -D -m 4755 -o root psm $(DESTDIR)$(bindir)/psm
 	install -D -m 0644 psm.1 $(DESTDIR)$(man1dir)/psm.1
 

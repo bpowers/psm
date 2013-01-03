@@ -2,3 +2,6 @@
 version.txt
 build/
 psm
+psm.1
+psm.html
+psm.xml
