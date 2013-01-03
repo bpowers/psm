@@ -23,8 +23,8 @@ clean:
 	rm -rf psm build
 
 install: psm
-	install -m 4755 -o root psm $(DESTDIR)$(bindir)
-	install -m 0644 psm.1 $(DESTDIR)$(man1dir)
+	install -D -m 4755 -o root psm $(DESTDIR)$(bindir)/psm
+	install -D -m 0644 psm.1 $(DESTDIR)$(man1dir)/psm.1
 
 deb: builddeb
 
