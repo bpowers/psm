@@ -28,11 +28,11 @@ install: psm
 deb: builddeb
 
 builddeb:
-	dch --newversion $(VERSION)-1 --distribution unstable --force-distribution -b "Last Commit: $(shell git log -1 --pretty=format:'(%ai) %H %cn <%ce>')"
-	dch --release  "new upstream"
 	mkdir -p build
 	git archive --prefix="$(PROJECT)-$(VERSION)/" HEAD | tar -xC build
 	echo $(VERSION) >build/$(PROJECT)-$(VERSION)/version.txt
+	(cd build/$(PROJECT)-$(VERSION) && dch --newversion $(VERSION)-1 --distribution unstable --force-distribution -b "Last Commit: $(shell git log -1 --pretty=format:'(%ai) %H %cn <%ce>')")
+	(cd build/$(PROJECT)-$(VERSION) && dch --release  "new upstream")
 	(cd build/$(PROJECT)-$(VERSION) && debuild -us -uc -v$(VERSION)-1)
 	@echo "Package is at build/$(PROJECT)_$(VERSION)-1_all.deb"
 
