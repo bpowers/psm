@@ -17,6 +17,7 @@ build:
 
 psm: *.go
 	go build
+	if [ $(shell basename $(PWD)) != psm ]; then mv $(shell basename $(PWD)) psm; fi
 
 clean:
 	rm -rf psm build
