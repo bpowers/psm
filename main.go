@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"runtime"
 	"runtime/pprof"
 	"sort"
@@ -36,8 +37,11 @@ Options:
 )
 
 var (
+	filter     string
 	memProfile string
 	cpuProfile string
+
+	filterRE *regexp.Regexp
 
 	tyPss          = []byte("Pss:")
 	tySwap         = []byte("Swap:")
@@ -231,6 +235,8 @@ func procMem(pid int) (pss, shared, swap float64, err error) {
 	return
 }
 
+// worker is executed in a new goroutine.  Its sole purpose is to
+// process requests for information about particular PIDs.
 func worker(pidRequest chan int, wg *sync.WaitGroup, result chan *CmdMemInfo) {
 	for pid := range pidRequest {
 		var err error
@@ -245,6 +251,9 @@ func worker(pidRequest chan int, wg *sync.WaitGroup, result chan *CmdMemInfo) {
 		} else if cmi.Name == "" {
 			// XXX: This happens with kernel
 			// threads. maybe warn? idk.
+			wg.Done()
+			continue
+		} else if filterRE != nil && !filterRE.MatchString(cmi.Name) {
 			wg.Done()
 			continue
 		}
@@ -273,12 +282,18 @@ func init() {
 		flag.PrintDefaults()
 	}
 
+	flag.StringVar(&filter, "filter", "",
+		"regex to test process names against")
 	flag.StringVar(&memProfile, "memprofile", "",
 		"write memory profile to this file")
 	flag.StringVar(&cpuProfile, "cpuprofile", "",
 		"write cpu profile to this file")
 
 	flag.Parse()
+
+	if filter != "" {
+		filterRE = regexp.MustCompile(filter)
+	}
 }
 
 // startProfiling enables memory and/or CPU profiling if the
