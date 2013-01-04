@@ -7,7 +7,7 @@ psm - Core memory and swap reporting
 
 SYNOPSIS
 --------
-'psm' [-cpuprofile=<file>] [-memprofile=<file>]
+'psm' [-cpuprofile=<file>] [-memprofile=<file>] [-filter=<regexp>]
 
 DESCRIPTION
 -----------
@@ -20,6 +20,12 @@ as setuid root.
 
 OPTIONS
 -------
+
+-filter=<regexp>::
+	Filter provides a way to report on a subset of running
+	processes.  The regular expression format is the same as in
+	Python or Perl, but for specifics see
+	<https://code.google.com/p/re2/wiki/Syntax>
 
 -cpuprofile=<file>::
 	Records a CPU profile to the given file, suitable for use with
