@@ -11,6 +11,22 @@ since the executable is a binary it can be made setuid root so that
 unprivileged users can get a quick overview of the current memory
 situation.
 
+installation
+------------
+
+If you're familiar with go and have the go toolchain installed,
+installation is as easy as:
+
+    go get github.com/bpowers/psm
+    sudo `which psm`
+
+The `sudo \`which psm\`` can get a bit tiring.  If you're on
+Ubuntu, there is a PPA which install psm as setuid root:
+
+    sudo add-apt-repository ppa:bobbypowers/psm
+    sudo apt-get update
+    sudo apt-get install psm
+
 example output
 --------------
 
