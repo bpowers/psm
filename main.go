@@ -316,6 +316,8 @@ func stopProfiling() {
 }
 
 func main() {
+	// if -memprof or -cpuprof haven't been set on the command
+	// line, these are nops
 	startProfiling()
 	defer stopProfiling()
 
