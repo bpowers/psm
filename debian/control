@@ -5,7 +5,7 @@ Priority: optional
 Homepage: https://github.com/bpowers/psm
 Vcs-Git: git://github.com/bpowers/psm.git
 Vcs-Browser: https://github.com/bpowers/psm
-Build-Depends: debhelper (>= 8), golang-go
+Build-Depends: debhelper (>= 8), golang-go, asciidoc, xmlto
 Standards-Version: 3.9.3
 
 Package: psm
