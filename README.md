@@ -20,7 +20,7 @@ installation is as easy as:
     go get github.com/bpowers/psm
     sudo `which psm`
 
-The `sudo \`which psm\`` can get a bit tiring.  If you're on
+The ``sudo `which psm` `` can get a bit tiring.  If you're on
 Ubuntu, there is a PPA which install psm as setuid root:
 
     sudo add-apt-repository ppa:bobbypowers/psm
