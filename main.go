@@ -51,8 +51,8 @@ type CmdMemInfo struct {
 	PIDs    []int
 	Name    string
 	Pss     float64
-	Private uint64
-	Swapped uint64
+	Shared  float64
+	Swapped float64
 }
 
 type MapInfo struct {
@@ -167,13 +167,14 @@ func splitSpaces(b []byte) [][]byte {
 
 // procMem returns the amount of Pss, shared, and swapped out memory
 // used.  The swapped out amount refers to anonymous pages only.
-func procMem(pid int) (pss float64, priv, swap uint64, err error) {
+func procMem(pid int) (pss, shared, swap float64, err error) {
 	fPath := fmt.Sprintf("/proc/%d/smaps", pid)
 	f, err := os.Open(fPath)
 	if err != nil {
 		err = fmt.Errorf("os.Open(%s): %s", fPath, err)
 		return
 	}
+	var priv float64
 	//var curr MapInfo
 	r := bufio.NewReaderSize(f, pageSize)
 	for {
@@ -216,16 +217,17 @@ func procMem(pid int) (pss float64, priv, swap uint64, err error) {
 				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
 				return
 			}
-			priv += v
+			priv += float64(v)
 		} else if bytes.Equal(ty, tySwap) {
 			v, err = ParseUint(pieces[1], 10, 64)
 			if err != nil {
 				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
 				return
 			}
-			swap += v
+			swap += float64(v)
 		}
 	}
+	shared = pss - priv
 	return
 }
 
@@ -247,7 +249,7 @@ func worker(pidRequest chan int, wg *sync.WaitGroup, result chan *CmdMemInfo) {
 			continue
 		}
 
-		cmi.Pss, cmi.Private, cmi.Swapped, err = procMem(pid)
+		cmi.Pss, cmi.Shared, cmi.Swapped, err = procMem(pid)
 		if err != nil {
 			log.Printf("procMem(%d): %s", pid, err)
 			wg.Done()
@@ -363,7 +365,7 @@ loop:
 			}
 			cmdMap[n].PIDs = append(cmdMap[n].PIDs, c.PIDs...)
 			cmdMap[n].Pss += c.Pss
-			cmdMap[n].Private += c.Private
+			cmdMap[n].Shared += c.Shared
 			cmdMap[n].Swapped += c.Swapped
 		default:
 			break loop
@@ -380,7 +382,7 @@ loop:
 	// keep track of total RAM and swap usage
 	var totPss, totSwap float64
 
-	fmt.Printf("%10s%10s%10s\t%s\n", "MB RAM", "PRIVATE", "SWAPPED", "PROCESS (COUNT)")
+	fmt.Printf("%10s%10s%10s\t%s\n", "MB RAM", "SHARED", "SWAPPED", "PROCESS (COUNT)")
 	for _, c := range cmds {
 		n := c.Name
 		if len(n) > CmdDisplayMax {
@@ -397,7 +399,7 @@ loop:
 			s = fmt.Sprintf("%10.1f", swap)
 		}
 		pss := float64(c.Pss) / 1024.
-		fmt.Printf("%10.1f%10.1f%10s\t%s (%d)\n", pss, float64(c.Private)/1024., s, n, len(c.PIDs))
+		fmt.Printf("%10.1f%10.1f%10s\t%s (%d)\n", pss, float64(c.Shared)/1024., s, n, len(c.PIDs))
 		totPss += pss
 	}
 	fmt.Printf("#%9.1f%20.1f\tTOTAL USED BY PROCESSES\n", totPss, totSwap)
