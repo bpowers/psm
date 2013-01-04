@@ -261,11 +261,11 @@ func worker(pidRequest chan int, wg *sync.WaitGroup, result chan *CmdMemInfo) {
 	}
 }
 
-type byTotal []*CmdMemInfo
+type byPss []*CmdMemInfo
 
-func (c byTotal) Len() int           { return len(c) }
-func (c byTotal) Less(i, j int) bool { return c[i].Pss < c[j].Pss }
-func (c byTotal) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
+func (c byPss) Len() int           { return len(c) }
+func (c byPss) Less(i, j int) bool { return c[i].Pss < c[j].Pss }
+func (c byPss) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
 
 func init() {
 	flag.Usage = func() {
@@ -380,7 +380,7 @@ loop:
 	for _, c := range cmdMap {
 		cmds = append(cmds, c)
 	}
-	sort.Sort(byTotal(cmds))
+	sort.Sort(byPss(cmds))
 
 	// keep track of total RAM and swap usage
 	var totPss, totSwap float64
