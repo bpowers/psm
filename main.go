@@ -322,7 +322,8 @@ func main() {
 	// need to be root to read map info for other user's
 	// processes.
 	if os.Geteuid() != 0 {
-		fmt.Printf("FATAL: root required.\n")
+		fmt.Printf("%s requires root privileges. (try 'sudo `which %s`)\n",
+			os.Args[0], os.Args[0])
 		return
 	}
 
