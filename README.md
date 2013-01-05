@@ -68,6 +68,21 @@ example output
 The `MB RAM` column is the sum of the Pss value of each mapping in
 `/proc/$PID/smaps` for each process.
 
+TODO
+----
+
+- port to the BSDs and OS X
+- FreeBSD has a Linux-compatable procfs impelmentation, which would
+  be trivial to use (and, indeed, ps_mem.py uses it).
+- OS X looks... fun.  MacFUSE provides a lot of the info we need, but
+  I don't want to depend on having that installed and manually having
+  their procfs mounted.  There are Mach functions we could use, but
+  I'm having trouble figuring out how to correctly pass data between
+  go and C.  Specifically: https://gist.github.com/4463209 - 'patches
+  welcome'.
+- ps_mem.py records the md5sum of each process's smaps entry to make
+  sure that we're not double-counting.  Its probably worth doing.
+
 license
 -------
 
