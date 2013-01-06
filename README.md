@@ -23,6 +23,7 @@ installation is as easy as:
 The ``sudo `which psm` `` can get a bit tiring.  If you're on
 Ubuntu, there is a PPA which install psm as setuid root:
 
+    sudo apt-get install python-software-properties # for apt-add-repository
     sudo add-apt-repository ppa:bobbypowers/psm
     sudo apt-get update
     sudo apt-get install psm
