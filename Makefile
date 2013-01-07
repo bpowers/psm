@@ -3,6 +3,8 @@ PROJECT  := psm
 # the more deb friendly 0.3.$NCOMMITS
 VERSION  := $(shell git describe --long | sed 's/v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\).*/\1.\2.\3/')
 
+DEBUILD_OPTS = -S -sa
+
 prefix   := /usr
 bindir   := $(prefix)/bin
 sharedir := $(prefix)/share
@@ -46,7 +48,7 @@ builddeb:
 	echo $(VERSION) >build/$(PROJECT)-$(VERSION)/version.txt
 	(cd build/$(PROJECT)-$(VERSION) && dch --newversion $(VERSION)-1 -b "Last Commit: $(shell git log -1 --pretty=format:'(%ai) %H %cn <%ce>')")
 	(cd build/$(PROJECT)-$(VERSION) && dch --release  "new upstream")
-	(cd build/$(PROJECT)-$(VERSION) && debuild -v$(VERSION)-1)
+	(cd build/$(PROJECT)-$(VERSION) && debuild $(DEBUILD_OPTS) -v$(VERSION)-1)
 	@echo "Package is at build/$(PROJECT)_$(VERSION)-1_all.deb"
 
 version:
