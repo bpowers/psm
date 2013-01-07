@@ -1,7 +1,7 @@
 PROJECT  := psm
 # turns the git-describe output of v0.3-$NCOMMITS-$SHA1 into
 # the more deb friendly 0.3.$NCOMMITS
-VERSION  := $(shell git describe --long | sed 's/v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\).*/\1.\2.\3/')
+VERSION  := $(shell git describe --long --match 'v*' | sed 's/v\([0-9]*\)\.\([0-9]*\)-\([0-9]*\).*/\1.\2.\3/')
 
 DEBUILD_OPTS = -S -sa
 
