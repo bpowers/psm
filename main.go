@@ -34,6 +34,7 @@ var (
 	filter     string
 	memProfile string
 	cpuProfile string
+	showHeap   bool
 
 	filterRE *regexp.Regexp
 
@@ -50,6 +51,7 @@ type CmdMemInfo struct {
 	Name    string
 	Pss     float64
 	Shared  float64
+	Heap    float64
 	Swapped float64
 }
 
@@ -102,7 +104,7 @@ func worker(pidRequest chan int, wg *sync.WaitGroup, result chan *CmdMemInfo) {
 			continue
 		}
 
-		cmi.Pss, cmi.Shared, _, cmi.Swapped, err = procMem(pid)
+		cmi.Pss, cmi.Shared, cmi.Heap, cmi.Swapped, err = procMem(pid)
 		if err != nil {
 			log.Printf("procMem(%d): %s", pid, err)
 			wg.Done()
@@ -132,6 +134,7 @@ func init() {
 		"write memory profile to this file")
 	flag.StringVar(&cpuProfile, "cpuprofile", "",
 		"write cpu profile to this file")
+	flag.BoolVar(&showHeap, "heap", false, "show heap column")
 
 	flag.Parse()
 
@@ -244,7 +247,17 @@ loop:
 	// keep track of total RAM and swap usage
 	var totPss, totSwap float64
 
-	fmt.Printf("%10s%10s%10s\t%s\n", "MB RAM", "SHARED", "SWAPPED", "PROCESS (COUNT)")
+	headFmt := "%10s%10s%10s\t%s\n"
+	cols := []interface{}{"MB RAM", "SHARED", "SWAPPED", "PROCESS (COUNT)"}
+	totFmt := "#%9.1f%20.1f\tTOTAL USED BY PROCESSES\n"
+
+	if showHeap {
+		headFmt = "%10s" + headFmt
+		cols = []interface{}{"MB RAM", "SHARED", "HEAP", "SWAPPED", "PROCESS (COUNT)"}
+		totFmt = "#%9.1f%30.1f\tTOTAL USED BY PROCESSES\n"
+	}
+
+	fmt.Printf(headFmt, cols...)
 	for _, c := range cmds {
 		n := c.Name
 		if len(n) > CmdDisplayMax {
@@ -261,8 +274,12 @@ loop:
 			s = fmt.Sprintf("%10.1f", swap)
 		}
 		pss := float64(c.Pss) / 1024.
-		fmt.Printf("%10.1f%10.1f%10s\t%s (%d)\n", pss, float64(c.Shared)/1024., s, n, len(c.PIDs))
+		if showHeap {
+			fmt.Printf("%10.1f%10.1f%10.1f%10s\t%s (%d)\n", pss, float64(c.Shared)/1024., c.Heap/1024., s, n, len(c.PIDs))
+		} else {
+			fmt.Printf("%10.1f%10.1f%10s\t%s (%d)\n", pss, float64(c.Shared)/1024., s, n, len(c.PIDs))
+		}
 		totPss += pss
 	}
-	fmt.Printf("#%9.1f%20.1f\tTOTAL USED BY PROCESSES\n", totPss, totSwap)
+	fmt.Printf(totFmt, totPss, totSwap)
 }

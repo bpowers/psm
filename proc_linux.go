@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	tyVmFlags          = []byte("VmFlags:")
+	tyVmFlags = []byte("VmFlags:")
 )
 
 // pidList returns a list of the process-IDs of every currently
