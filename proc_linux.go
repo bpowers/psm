@@ -13,7 +13,11 @@ import (
 )
 
 var (
-	tyVmFlags = []byte("VmFlags:")
+	tyVmFlags      = []byte("VmFlags:")
+	tyPss          = []byte("Pss:")
+	tySwap         = []byte("Swap:")
+	tyPrivateClean = []byte("Private_Clean:")
+	tyPrivateDirty = []byte("Private_Dirty:")
 )
 
 // pidList returns a list of the process-IDs of every currently

@@ -37,11 +37,6 @@ var (
 	showHeap   bool
 
 	filterRE *regexp.Regexp
-
-	tyPss          = []byte("Pss:")
-	tySwap         = []byte("Swap:")
-	tyPrivateClean = []byte("Private_Clean:")
-	tyPrivateDirty = []byte("Private_Dirty:")
 )
 
 // store info about a command (group of processes), similar to how
@@ -269,15 +264,15 @@ loop:
 		}
 		s := ""
 		if c.Swapped > 0 {
-			swap := float64(c.Swapped) / 1024.
+			swap := c.Swapped / 1024.
 			totSwap += swap
 			s = fmt.Sprintf("%10.1f", swap)
 		}
 		pss := float64(c.Pss) / 1024.
 		if showHeap {
-			fmt.Printf("%10.1f%10.1f%10.1f%10s\t%s (%d)\n", pss, float64(c.Shared)/1024., c.Heap/1024., s, n, len(c.PIDs))
+			fmt.Printf("%10.1f%10.1f%10.1f%10s\t%s (%d)\n", pss, c.Shared/1024., c.Heap/1024., s, n, len(c.PIDs))
 		} else {
-			fmt.Printf("%10.1f%10.1f%10s\t%s (%d)\n", pss, float64(c.Shared)/1024., s, n, len(c.PIDs))
+			fmt.Printf("%10.1f%10.1f%10s\t%s (%d)\n", pss, c.Shared/1024., s, n, len(c.PIDs))
 		}
 		totPss += pss
 	}
