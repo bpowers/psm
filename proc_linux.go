@@ -12,6 +12,10 @@ import (
 	"strings"
 )
 
+var (
+	tyVmFlags          = []byte("VmFlags:")
+)
+
 // pidList returns a list of the process-IDs of every currently
 // running process on the local system.
 func pidList() ([]int, error) {
@@ -68,7 +72,7 @@ func procName(pid int) (string, error) {
 
 // procMem returns the amount of Pss, shared, and swapped out memory
 // used.  The swapped out amount refers to anonymous pages only.
-func procMem(pid int) (pss, shared, swap float64, err error) {
+func procMem(pid int) (pss, shared, heap, swap float64, err error) {
 	fPath := fmt.Sprintf("/proc/%d/smaps", pid)
 	f, err := os.Open(fPath)
 	if err != nil {
@@ -76,7 +80,7 @@ func procMem(pid int) (pss, shared, swap float64, err error) {
 		return
 	}
 	var priv float64
-	//var curr MapInfo
+	var curr MapInfo
 	r := bufio.NewReaderSize(f, pageSize)
 	for {
 		var l []byte
@@ -99,7 +103,9 @@ func procMem(pid int) (pss, shared, swap float64, err error) {
 		}
 
 		if len(l) != mapDetailLen {
-			//curr = NewMapInfo(l)
+			if !bytes.HasPrefix(l, tyVmFlags) {
+				curr = NewMapInfo(l)
+			}
 			continue
 		}
 		pieces := splitSpaces(l)
@@ -111,7 +117,13 @@ func procMem(pid int) (pss, shared, swap float64, err error) {
 				err = fmt.Errorf("Atoi(%s): %s", string(pieces[1]), err)
 				return
 			}
-			pss += float64(v) + PssAdjust
+			m := float64(v)
+			pss += m + PssAdjust
+			if curr.Name == "[heap]" {
+				// we don't nead PssAdjust because
+				// heap is private and anonymous.
+				heap = m
+			}
 		} else if bytes.Equal(ty, tyPrivateClean) || bytes.Equal(ty, tyPrivateDirty) {
 			v, err = ParseUint(pieces[1], 10, 64)
 			if err != nil {

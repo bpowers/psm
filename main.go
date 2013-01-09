@@ -102,7 +102,7 @@ func worker(pidRequest chan int, wg *sync.WaitGroup, result chan *CmdMemInfo) {
 			continue
 		}
 
-		cmi.Pss, cmi.Shared, cmi.Swapped, err = procMem(pid)
+		cmi.Pss, cmi.Shared, _, cmi.Swapped, err = procMem(pid)
 		if err != nil {
 			log.Printf("procMem(%d): %s", pid, err)
 			wg.Done()
