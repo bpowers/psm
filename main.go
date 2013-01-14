@@ -15,13 +15,6 @@ import (
 
 const (
 	CmdDisplayMax = 32
-	// max length of /proc/$PID/comm
-	CommMax = 16
-	// from ps_mem - average error due to truncation in the kernel
-	// pss calculations
-	PssAdjust    = .5
-	pageSize     = 4096
-	mapDetailLen = len("Size:                  4 kB")
 
 	usage = `Usage: %s [OPTION...]
 Simple, accurate RAM and swap reporting.
