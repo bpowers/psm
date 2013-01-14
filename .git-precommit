@@ -1,0 +1,18 @@
+#!/bin/bash
+
+ret=0
+
+# this strange-ish syntax is because if we directly pipe git status
+# into while, it is executed in a subshell, and we can't modify the
+# value of ret.
+while read f; do
+    if ! [ "go" == "${f##*.}" ]; then
+	continue
+    fi
+    if [ '0' != "`gofmt -l $f | wc -c`" ]; then
+	echo "needs go fmt: $f"
+	ret=1
+    fi
+done <<< "`git status -s | egrep '^A|^M' | cut -d ' ' -f 2-`"
+
+exit $ret
