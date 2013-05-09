@@ -7,7 +7,6 @@ import (
 	"os"
 	"regexp"
 	"runtime"
-	"runtime/pprof"
 	"sort"
 	"strings"
 	"sync"
@@ -24,11 +23,8 @@ Options:
 )
 
 var (
-	filter     string
-	memProfile string
-	cpuProfile string
+	filter, memProfile, cpuProfile string
 	showHeap   bool
-
 	filterRE *regexp.Regexp
 )
 
@@ -131,45 +127,15 @@ func init() {
 	}
 }
 
-// startProfiling enables memory and/or CPU profiling if the
-// appropriate command line flags have been set.
-func startProfiling() {
-	var err error
-	// if we've passed in filenames to dump profiling data too,
-	// start collecting profiling data.
-	if memProfile != "" {
-		runtime.MemProfileRate = 1
-	}
-	if cpuProfile != "" {
-		var f *os.File
-		if f, err = os.Create(cpuProfile); err != nil {
-			log.Fatal(err)
-		}
-		pprof.StartCPUProfile(f)
-	}
-}
-
-func stopProfiling() {
-	if memProfile != "" {
-		runtime.GC()
-		f, err := os.Create(memProfile)
-		if err != nil {
-			log.Println(err)
-		}
-		pprof.WriteHeapProfile(f)
-		f.Close()
-	}
-	if cpuProfile != "" {
-		pprof.StopCPUProfile()
-		cpuProfile = ""
-	}
-}
-
 func main() {
+	prof, err := NewProf(memProfile, cpuProfile)
+	if err != nil {
+		log.Fatal(err)
+	}
 	// if -memprof or -cpuprof haven't been set on the command
 	// line, these are nops
-	startProfiling()
-	defer stopProfiling()
+	prof.Start()
+	defer prof.Stop()
 
 	// need to be root to read map info for other user's
 	// processes.
