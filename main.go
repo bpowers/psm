@@ -23,9 +23,11 @@ Options:
 )
 
 var (
-	filter, memProfile, cpuProfile string
+	filter     string
+	memProfile string
+	cpuProfile string
 	showHeap   bool
-	filterRE *regexp.Regexp
+	filterRE   *regexp.Regexp
 )
 
 // store info about a command (group of processes), similar to how
