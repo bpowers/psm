@@ -1,6 +1,5 @@
 package main
 
-
 import (
 	"os"
 	"runtime"
@@ -15,14 +14,17 @@ func NewProf(memprof, cpuprof string) (p *ProfInstance, err error) {
 	p = &ProfInstance{}
 	if memprof != "" {
 		if p.memprof, err = os.Create(memprof); err != nil {
+			p = nil
 			return
 		}
 	}
 	if cpuprof != "" {
 		if p.cpuprof, err = os.Create(cpuprof); err != nil {
+			// close all files on error
 			if p.memprof != nil {
 				p.memprof.Close()
 			}
+			p = nil
 			return
 		}
 	}
@@ -36,7 +38,7 @@ func (p *ProfInstance) Start() {
 	// if we've passed in filenames to dump profiling data too,
 	// start collecting profiling data.
 	if p.memprof != nil {
-		runtime.MemProfileRate = 1		
+		runtime.MemProfileRate = 1
 	}
 	if p.cpuprof != nil {
 		pprof.StartCPUProfile(p.cpuprof)
