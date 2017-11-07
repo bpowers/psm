@@ -28,6 +28,7 @@ var (
 	tySwap         = []byte("Swap:")
 	tyPrivateClean = []byte("Private_Clean:")
 	tyPrivateDirty = []byte("Private_Dirty:")
+	kb             = []byte(" kB")
 )
 
 // pidList returns a list of the process-IDs of every currently
@@ -116,7 +117,7 @@ func procMem(pid int) (pss, shared, heap, swap float64, err error) {
 			return
 		}
 
-		if len(l) != mapDetailLen {
+		if len(l) != mapDetailLen && !bytes.HasSuffix(l, kb) {
 			if !bytes.HasPrefix(l, tyVmFlags) {
 				curr = NewMapInfo(l)
 			}

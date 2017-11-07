@@ -55,6 +55,10 @@ func NewMapInfo(mapLine []byte) MapInfo {
 	if len(pieces) == 6 {
 		mi.Name = string(pieces[5])
 	}
+	if len(pieces) < 5 {
+		panic(fmt.Sprintf("NewMapInfo(%d): `%s`",
+			len(pieces), string(mapLine)))
+	}
 	mi.Inode, err = ParseUint(pieces[4], 10, 64)
 	if err != nil {
 		panic(fmt.Sprintf("NewMapInfo: Atoi(%s): %s (%s)",
